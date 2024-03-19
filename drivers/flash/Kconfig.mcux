@@ -62,6 +62,15 @@ config FLASH_MCUX_FLEXSPI_HYPERFLASH
 	select MEMC
 	select MEMC_MCUX_FLEXSPI
 
+config FLASH_MCUX_FLEXSPI_W25Q128JV
+	bool "MCUX FlexSPI W25Q128JV driver"
+	default y
+	depends on DT_HAS_NXP_IMX_FLEXSPI_W25Q128JV_ENABLED
+	select FLASH_HAS_PAGE_LAYOUT
+	select FLASH_HAS_DRIVER_ENABLED
+	select MEMC
+	select MEMC_MCUX_FLEXSPI
+
 endmenu
 
 if FLASH_MCUX_FLEXSPI_MX25UM51345G
@@ -86,7 +95,9 @@ endif # FLASH_MCUX_FLEXSPI_MX25UM51345G
 config FLASH_MCUX_FLEXSPI_NOR_WRITE_BUFFER
 	bool "MCUX FlexSPI NOR write RAM buffer"
 	default y
-	depends on (FLASH_MCUX_FLEXSPI_NOR || FLASH_MCUX_FLEXSPI_MX25UM51345G)
+	depends on FLASH_MCUX_FLEXSPI_NOR || \
+		   FLASH_MCUX_FLEXSPI_MX25UM51345G || \
+		   FLASH_MCUX_FLEXSPI_W25Q128JV
 	help
 	  Copy the data to a RAM buffer before writing it to the flash.
 	  This prevents faults when the data to write would be located on the
