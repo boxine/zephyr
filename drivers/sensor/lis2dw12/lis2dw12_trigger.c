@@ -22,8 +22,7 @@ LOG_MODULE_DECLARE(LIS2DW12, CONFIG_SENSOR_LOG_LEVEL);
 /**
  * lis2dw12_enable_int - enable selected int pin to generate interrupt
  */
-static int lis2dw12_enable_int(const struct device *dev,
-			       enum sensor_trigger_type type, int enable)
+static int lis2dw12_enable_int(const struct device *dev, enum sensor_trigger_type type, int enable)
 {
 	const struct lis2dw12_device_config *cfg = dev->config;
 	stmdev_ctx_t *ctx = (stmdev_ctx_t *)&cfg->ctx;
@@ -33,39 +32,31 @@ static int lis2dw12_enable_int(const struct device *dev,
 	case SENSOR_TRIG_DATA_READY:
 		if (cfg->int_pin == 1) {
 			/* set interrupt for pin INT1 */
-			lis2dw12_pin_int1_route_get(ctx,
-					&int_route.ctrl4_int1_pad_ctrl);
+			lis2dw12_pin_int1_route_get(ctx, &int_route.ctrl4_int1_pad_ctrl);
 			int_route.ctrl4_int1_pad_ctrl.int1_drdy = enable;
 
-			return lis2dw12_pin_int1_route_set(ctx,
-					&int_route.ctrl4_int1_pad_ctrl);
+			return lis2dw12_pin_int1_route_set(ctx, &int_route.ctrl4_int1_pad_ctrl);
 		} else {
 			/* set interrupt for pin INT2 */
-			lis2dw12_pin_int2_route_get(ctx,
-					&int_route.ctrl5_int2_pad_ctrl);
+			lis2dw12_pin_int2_route_get(ctx, &int_route.ctrl5_int2_pad_ctrl);
 			int_route.ctrl5_int2_pad_ctrl.int2_drdy = enable;
 
-			return lis2dw12_pin_int2_route_set(ctx,
-					&int_route.ctrl5_int2_pad_ctrl);
+			return lis2dw12_pin_int2_route_set(ctx, &int_route.ctrl5_int2_pad_ctrl);
 		}
 		break;
 #ifdef CONFIG_LIS2DW12_TAP
 	case SENSOR_TRIG_TAP:
 		/* set interrupt for pin INT1 */
-		lis2dw12_pin_int1_route_get(ctx,
-				&int_route.ctrl4_int1_pad_ctrl);
+		lis2dw12_pin_int1_route_get(ctx, &int_route.ctrl4_int1_pad_ctrl);
 		int_route.ctrl4_int1_pad_ctrl.int1_single_tap = enable;
 
-		return lis2dw12_pin_int1_route_set(ctx,
-				&int_route.ctrl4_int1_pad_ctrl);
+		return lis2dw12_pin_int1_route_set(ctx, &int_route.ctrl4_int1_pad_ctrl);
 	case SENSOR_TRIG_DOUBLE_TAP:
 		/* set interrupt for pin INT1 */
-		lis2dw12_pin_int1_route_get(ctx,
-				&int_route.ctrl4_int1_pad_ctrl);
+		lis2dw12_pin_int1_route_get(ctx, &int_route.ctrl4_int1_pad_ctrl);
 		int_route.ctrl4_int1_pad_ctrl.int1_tap = enable;
 
-		return lis2dw12_pin_int1_route_set(ctx,
-				&int_route.ctrl4_int1_pad_ctrl);
+		return lis2dw12_pin_int1_route_set(ctx, &int_route.ctrl4_int1_pad_ctrl);
 #endif /* CONFIG_LIS2DW12_TAP */
 #ifdef CONFIG_LIS2DW12_THRESHOLD
 	/**
@@ -76,11 +67,9 @@ static int lis2dw12_enable_int(const struct device *dev,
 	 */
 	case SENSOR_TRIG_THRESHOLD:
 		LOG_DBG("Setting int1_wu: %d\n", enable);
-		lis2dw12_pin_int1_route_get(ctx,
-				&int_route.ctrl4_int1_pad_ctrl);
+		lis2dw12_pin_int1_route_get(ctx, &int_route.ctrl4_int1_pad_ctrl);
 		int_route.ctrl4_int1_pad_ctrl.int1_wu = enable;
-		return lis2dw12_pin_int1_route_set(ctx,
-						   &int_route.ctrl4_int1_pad_ctrl);
+		return lis2dw12_pin_int1_route_set(ctx, &int_route.ctrl4_int1_pad_ctrl);
 #endif
 #ifdef CONFIG_LIS2DW12_FREEFALL
 	/**
@@ -91,11 +80,9 @@ static int lis2dw12_enable_int(const struct device *dev,
 	 */
 	case SENSOR_TRIG_FREEFALL:
 		LOG_DBG("Setting int1_ff: %d\n", enable);
-		lis2dw12_pin_int1_route_get(ctx,
-				&int_route.ctrl4_int1_pad_ctrl);
+		lis2dw12_pin_int1_route_get(ctx, &int_route.ctrl4_int1_pad_ctrl);
 		int_route.ctrl4_int1_pad_ctrl.int1_ff = enable;
-		return lis2dw12_pin_int1_route_set(ctx,
-				&int_route.ctrl4_int1_pad_ctrl);
+		return lis2dw12_pin_int1_route_set(ctx, &int_route.ctrl4_int1_pad_ctrl);
 #endif /* CONFIG_LIS2DW12_FREEFALL */
 	default:
 		LOG_ERR("Unsupported trigger interrupt route %d", type);
@@ -106,19 +93,29 @@ static int lis2dw12_enable_int(const struct device *dev,
 /**
  * lis2dw12_trigger_set - link external trigger to event data ready
  */
-int lis2dw12_trigger_set(const struct device *dev,
-			  const struct sensor_trigger *trig,
-			  sensor_trigger_handler_t handler)
+int lis2dw12_trigger_set(const struct device *dev, const struct sensor_trigger *trig,
+			 sensor_trigger_handler_t handler)
 {
 	const struct lis2dw12_device_config *cfg = dev->config;
 	stmdev_ctx_t *ctx = (stmdev_ctx_t *)&cfg->ctx;
 	struct lis2dw12_data *lis2dw12 = dev->data;
 	int16_t raw[3];
 	int state = (handler != NULL) ? PROPERTY_ENABLE : PROPERTY_DISABLE;
+	int local_ret;
 
 	if (cfg->gpio_int.port == NULL) {
 		LOG_ERR("trigger_set is not supported");
 		return -ENOTSUP;
+	}
+
+	if ((state == PROPERTY_ENABLE) && (!lis2dw12->trigger_callback_enabled)) {
+		lis2dw12->trigger_callback_enabled = true;
+		lis2dw12_pm_device_handler_get(dev);
+	} else {
+		if ((state == PROPERTY_DISABLE) && (!lis2dw12->trigger_callback_enabled)) {
+			LOG_INF("Trigger callbacks already NULL");
+			return 0;
+		}
 	}
 
 	switch (trig->type) {
@@ -129,52 +126,78 @@ int lis2dw12_trigger_set(const struct device *dev,
 			/* dummy read: re-trigger interrupt */
 			lis2dw12_acceleration_raw_get(ctx, raw);
 		}
-		return lis2dw12_enable_int(dev, SENSOR_TRIG_DATA_READY, state);
+		local_ret = lis2dw12_enable_int(dev, SENSOR_TRIG_DATA_READY, state);
 		break;
 #ifdef CONFIG_LIS2DW12_TAP
 	case SENSOR_TRIG_TAP:
 	case SENSOR_TRIG_DOUBLE_TAP:
 		/* check if tap detection is enabled  */
-		if ((cfg->tap_threshold[0] == 0) &&
-		    (cfg->tap_threshold[1] == 0) &&
+		if ((cfg->tap_threshold[0] == 0) && (cfg->tap_threshold[1] == 0) &&
 		    (cfg->tap_threshold[2] == 0)) {
 			LOG_ERR("Unsupported sensor trigger");
-			return -ENOTSUP;
+			local_ret = -ENOTSUP;
+			break;
 		}
 
 		/* Set single TAP trigger  */
 		if (trig->type == SENSOR_TRIG_TAP) {
 			lis2dw12->tap_handler = handler;
 			lis2dw12->tap_trig = trig;
-			return lis2dw12_enable_int(dev, SENSOR_TRIG_TAP, state);
+			local_ret = lis2dw12_enable_int(dev, SENSOR_TRIG_TAP, state);
+			break;
 		}
 
 		/* Set double TAP trigger  */
 		lis2dw12->double_tap_handler = handler;
 		lis2dw12->double_tap_trig = trig;
-		return lis2dw12_enable_int(dev, SENSOR_TRIG_DOUBLE_TAP, state);
+		local_ret = lis2dw12_enable_int(dev, SENSOR_TRIG_DOUBLE_TAP, state);
+		break;
 #endif /* CONFIG_LIS2DW12_TAP */
 #ifdef CONFIG_LIS2DW12_THRESHOLD
-	case SENSOR_TRIG_THRESHOLD:
-	{
+	case SENSOR_TRIG_THRESHOLD: {
 		LOG_DBG("Set trigger %d (handler: %p)\n", trig->type, handler);
 		lis2dw12->threshold_handler = handler;
 		lis2dw12->threshold_trig = trig;
-		return lis2dw12_enable_int(dev, SENSOR_TRIG_THRESHOLD, state);
+		local_ret = lis2dw12_enable_int(dev, SENSOR_TRIG_THRESHOLD, state);
+		break;
 	}
 #endif
 #ifdef CONFIG_LIS2DW12_FREEFALL
 	case SENSOR_TRIG_FREEFALL:
-	LOG_DBG("Set freefall %d (handler: %p)\n", trig->type, handler);
+		LOG_DBG("Set freefall %d (handler: %p)\n", trig->type, handler);
 		lis2dw12->freefall_handler = handler;
 		lis2dw12->freefall_trig = trig;
-		return lis2dw12_enable_int(dev, SENSOR_TRIG_FREEFALL, state);
-	break;
+		local_ret = lis2dw12_enable_int(dev, SENSOR_TRIG_FREEFALL, state);
+		break;
 #endif /* CONFIG_LIS2DW12_FREEFALL */
 	default:
 		LOG_ERR("Unsupported sensor trigger");
-		return -ENOTSUP;
+		local_ret = -ENOTSUP;
 	}
+
+	if (lis2dw12->drdy_handler != NULL) {
+		return local_ret;
+	}
+#ifdef CONFIG_LIS2DW12_TAP
+	if ((lis2dw12->tap_handler != NULL) || (lis2dw12->double_tap_handler != NULL)) {
+		return local_ret;
+	}
+#endif /* CONFIG_LIS2DW12_TAP */
+#ifdef CONFIG_LIS2DW12_THRESHOLD
+	if (lis2dw12->threshold_handler != NULL) {
+		return local_ret;
+	}
+#endif /* CONFIG_LIS2DW12_THRESHOLD */
+#ifdef CONFIG_LIS2DW12_FREEFALL
+	if (lis2dw12->freefall_handler != NULL) {
+		return local_ret;
+	}
+#endif /* CONFIG_LIS2DW12_FREEFALL */
+
+	/* Only put back the domain if all callbacks are NULL */
+	lis2dw12->trigger_callback_enabled = false;
+	lis2dw12_pm_device_handler_put(dev);
+	return local_ret;
 }
 
 static int lis2dw12_handle_drdy_int(const struct device *dev)
@@ -276,15 +299,13 @@ static void lis2dw12_handle_interrupt(const struct device *dev)
 	}
 #endif /* CONFIG_LIS2DW12_FREEFALL */
 
-	gpio_pin_interrupt_configure_dt(&cfg->gpio_int,
-					GPIO_INT_EDGE_TO_ACTIVE);
+	gpio_pin_interrupt_configure_dt(&cfg->gpio_int, GPIO_INT_EDGE_TO_ACTIVE);
 }
 
-static void lis2dw12_gpio_callback(const struct device *dev,
-				    struct gpio_callback *cb, uint32_t pins)
+static void lis2dw12_gpio_callback(const struct device *dev, struct gpio_callback *cb,
+				   uint32_t pins)
 {
-	struct lis2dw12_data *lis2dw12 =
-		CONTAINER_OF(cb, struct lis2dw12_data, gpio_cb);
+	struct lis2dw12_data *lis2dw12 = CONTAINER_OF(cb, struct lis2dw12_data, gpio_cb);
 	const struct lis2dw12_device_config *cfg = lis2dw12->dev->config;
 
 	if ((pins & BIT(cfg->gpio_int.pin)) == 0U) {
@@ -318,8 +339,7 @@ static void lis2dw12_thread(void *p1, void *p2, void *p3)
 #ifdef CONFIG_LIS2DW12_TRIGGER_GLOBAL_THREAD
 static void lis2dw12_work_cb(struct k_work *work)
 {
-	struct lis2dw12_data *lis2dw12 =
-		CONTAINER_OF(work, struct lis2dw12_data, work);
+	struct lis2dw12_data *lis2dw12 = CONTAINER_OF(work, struct lis2dw12_data, work);
 
 	lis2dw12_handle_interrupt(lis2dw12->dev);
 }
@@ -439,8 +459,7 @@ int lis2dw12_init_interrupt(const struct device *dev)
 	/* setup data ready gpio interrupt (INT1 or INT2) */
 	if (!gpio_is_ready_dt(&cfg->gpio_int)) {
 		if (cfg->gpio_int.port) {
-			LOG_ERR("%s: device %s is not ready", dev->name,
-						cfg->gpio_int.port->name);
+			LOG_ERR("%s: device %s is not ready", dev->name, cfg->gpio_int.port->name);
 			return -ENODEV;
 		}
 
@@ -455,10 +474,8 @@ int lis2dw12_init_interrupt(const struct device *dev)
 	k_sem_init(&lis2dw12->gpio_sem, 0, K_SEM_MAX_LIMIT);
 
 	k_thread_create(&lis2dw12->thread, lis2dw12->thread_stack,
-		       CONFIG_LIS2DW12_THREAD_STACK_SIZE,
-		       lis2dw12_thread, lis2dw12,
-		       NULL, NULL, K_PRIO_COOP(CONFIG_LIS2DW12_THREAD_PRIORITY),
-		       0, K_NO_WAIT);
+			CONFIG_LIS2DW12_THREAD_STACK_SIZE, lis2dw12_thread, lis2dw12, NULL, NULL,
+			K_PRIO_COOP(CONFIG_LIS2DW12_THREAD_PRIORITY), 0, K_NO_WAIT);
 #elif defined(CONFIG_LIS2DW12_TRIGGER_GLOBAL_THREAD)
 	lis2dw12->work.handler = lis2dw12_work_cb;
 #endif /* CONFIG_LIS2DW12_TRIGGER_OWN_THREAD */
@@ -469,12 +486,9 @@ int lis2dw12_init_interrupt(const struct device *dev)
 		return ret;
 	}
 
-	LOG_INF("%s: int on %s.%02u", dev->name, cfg->gpio_int.port->name,
-				      cfg->gpio_int.pin);
+	LOG_INF("%s: int on %s.%02u", dev->name, cfg->gpio_int.port->name, cfg->gpio_int.pin);
 
-	gpio_init_callback(&lis2dw12->gpio_cb,
-			   lis2dw12_gpio_callback,
-			   BIT(cfg->gpio_int.pin));
+	gpio_init_callback(&lis2dw12->gpio_cb, lis2dw12_gpio_callback, BIT(cfg->gpio_int.pin));
 
 	if (gpio_add_callback(cfg->gpio_int.port, &lis2dw12->gpio_cb) < 0) {
 		LOG_DBG("Could not set gpio callback");
@@ -483,8 +497,8 @@ int lis2dw12_init_interrupt(const struct device *dev)
 
 	/* set data ready mode on int1/int2 */
 	LOG_DBG("drdy_pulsed is %d", (int)cfg->drdy_pulsed);
-	lis2dw12_drdy_pulsed_t mode = cfg->drdy_pulsed ? LIS2DW12_DRDY_PULSED :
-							 LIS2DW12_DRDY_LATCHED;
+	lis2dw12_drdy_pulsed_t mode =
+		cfg->drdy_pulsed ? LIS2DW12_DRDY_PULSED : LIS2DW12_DRDY_LATCHED;
 
 	ret = lis2dw12_data_ready_mode_set(ctx, mode);
 	if (ret < 0) {
@@ -501,11 +515,10 @@ int lis2dw12_init_interrupt(const struct device *dev)
 
 #ifdef CONFIG_LIS2DW12_FREEFALL
 	ret = lis2dw12_ff_init(dev);
-		if (ret < 0) {
-			return ret;
-		}
+	if (ret < 0) {
+		return ret;
+	}
 #endif /* CONFIG_LIS2DW12_FREEFALL */
 
-	return gpio_pin_interrupt_configure_dt(&cfg->gpio_int,
-					       GPIO_INT_EDGE_TO_ACTIVE);
+	return gpio_pin_interrupt_configure_dt(&cfg->gpio_int, GPIO_INT_EDGE_TO_ACTIVE);
 }

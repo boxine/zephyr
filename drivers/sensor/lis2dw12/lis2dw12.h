@@ -27,36 +27,35 @@
 #endif /* DT_ANY_INST_ON_BUS_STATUS_OKAY(i2c) */
 
 /* Return ODR reg value based on data rate set */
-#define LIS2DW12_ODR_TO_REG(_odr) \
-	((_odr <= 1) ? LIS2DW12_XL_ODR_1Hz6_LP_ONLY : \
-	 (_odr <= 12) ? LIS2DW12_XL_ODR_12Hz5 : \
-	 ((31 - __builtin_clz(_odr / 25))) + 3)
+#define LIS2DW12_ODR_TO_REG(_odr)                                                                  \
+	((_odr <= 1)    ? LIS2DW12_XL_ODR_1Hz6_LP_ONLY                                             \
+	 : (_odr <= 12) ? LIS2DW12_XL_ODR_12Hz5                                                    \
+			: ((31 - __builtin_clz(_odr / 25))) + 3)
 
 /* Return data rate in Hz for given register value */
-#define LIS2DW12_REG_TO_ODR(_reg) \
-	((_reg == 0) ? 0 : \
-	(_reg == 1) ? 1 : \
-	(_reg == 2) ? 12 : \
-	(_reg > 9) ? 1600 : \
-	(1 << (_reg - 3)) * 25)
+#define LIS2DW12_REG_TO_ODR(_reg)                                                                  \
+	((_reg == 0)   ? 0                                                                         \
+	 : (_reg == 1) ? 1                                                                         \
+	 : (_reg == 2) ? 12                                                                        \
+	 : (_reg > 9)  ? 1600                                                                      \
+		       : (1 << (_reg - 3)) * 25)
 
 /* FS reg value from Full Scale */
-#define LIS2DW12_FS_TO_REG(_fs)	(30 - __builtin_clz(_fs))
+#define LIS2DW12_FS_TO_REG(_fs) (30 - __builtin_clz(_fs))
 
 /* Acc Gain value in ug/LSB in High Perf mode */
-#define LIS2DW12_FS_2G_GAIN		244
-#define LIS2DW12_FS_4G_GAIN		488
-#define LIS2DW12_FS_8G_GAIN		976
-#define LIS2DW12_FS_16G_GAIN		1952
+#define LIS2DW12_FS_2G_GAIN  244
+#define LIS2DW12_FS_4G_GAIN  488
+#define LIS2DW12_FS_8G_GAIN  976
+#define LIS2DW12_FS_16G_GAIN 1952
 
-#define LIS2DW12_SHFT_GAIN_NOLP1	2
+#define LIS2DW12_SHFT_GAIN_NOLP1        2
 #define LIS2DW12_ACCEL_GAIN_DEFAULT_VAL LIS2DW12_FS_2G_GAIN
-#define LIS2DW12_FS_TO_GAIN(_fs, _lp1) \
-		(LIS2DW12_FS_2G_GAIN << ((_fs) + (_lp1)))
+#define LIS2DW12_FS_TO_GAIN(_fs, _lp1)  (LIS2DW12_FS_2G_GAIN << ((_fs) + (_lp1)))
 
 /* shift value for power mode */
-#define LIS2DW12_SHIFT_PM1		4
-#define LIS2DW12_SHIFT_PMOTHER		2
+#define LIS2DW12_SHIFT_PM1     4
+#define LIS2DW12_SHIFT_PMOTHER 2
 
 /**
  * struct lis2dw12_device_config - lis2dw12 hw configuration
@@ -75,6 +74,7 @@ struct lis2dw12_device_config {
 #endif
 	} stmemsc_cfg;
 	lis2dw12_mode_t pm;
+	lis2dw12_fmode_t fmode;
 	uint16_t odr;
 	uint8_t range;
 	uint8_t bw_filt;
@@ -106,12 +106,15 @@ struct lis2dw12_device_config {
 struct lis2dw12_data {
 	int16_t acc[3];
 
-	 /* save sensitivity */
+	/* save sensitivity */
 	uint16_t gain;
-	 /* output data rate */
+	/* output data rate */
 	uint16_t odr;
+	bool continuous_mode_enabled;
+	bool power_domain_claimed;
 
 #ifdef CONFIG_LIS2DW12_TRIGGER
+	bool trigger_callback_enabled;
 	const struct device *dev;
 
 	struct gpio_callback gpio_cb;
@@ -143,9 +146,29 @@ struct lis2dw12_data {
 
 #ifdef CONFIG_LIS2DW12_TRIGGER
 int lis2dw12_init_interrupt(const struct device *dev);
-int lis2dw12_trigger_set(const struct device *dev,
-			  const struct sensor_trigger *trig,
-			  sensor_trigger_handler_t handler);
+int lis2dw12_trigger_set(const struct device *dev, const struct sensor_trigger *trig,
+			 sensor_trigger_handler_t handler);
+/**
+ * @brief	This function gets the power domain for the device
+ *			if CONFIG_PM_DEVICE is enabled, otherwise will set
+ *			the device to busy.
+ * @param	dev [in]. the pointer to the device for which
+ *			we wish to turn the power domain on.
+ * @note	This function should be called AFTER setting
+ *			the respective flags for requesting power
+ */
+void lis2dw12_pm_device_handler_get(const struct device *dev);
+
+/**
+ * @brief	This function puts the power domain for the device
+ *			if CONFIG_PM_DEVICE is enabled, otherwise will clear
+ *			the device's busy status.
+ * @param	dev [in]. the pointer to the device for which
+ *			we wish to turn the power domain off.
+ * @note	This function should be called AFTER clearing
+ *			the respective flags for requesting power
+ */
+void lis2dw12_pm_device_handler_put(const struct device *dev);
 #endif /* CONFIG_LIS2DW12_TRIGGER */
 
 #endif /* ZEPHYR_DRIVERS_SENSOR_LIS2DW12_LIS2DW12_H_ */

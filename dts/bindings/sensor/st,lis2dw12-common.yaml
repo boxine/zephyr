@@ -97,6 +97,34 @@ properties:
 
     enum: [0, 1, 2, 3, 4]
 
+  fifo-mode:
+    type: int
+    default: 0
+    description: |
+      Specify the sensor FIFO mode. Default is 0
+
+        0 # Bypass Mode. In this mode the FIFO is not operational no data
+        is collected in FIFO memory, and it remains empty with the only actual
+        sample available in the output registers.
+
+        1 # FIFO Mode. Data from the X, Y and Z channels are stored
+        in the FIFO until it is full, when 32 unread samples are stored
+        in memory, data collecting is stopped.
+
+        3 # Continuous-to-FIFO mode. FIFO operates in Continuous mode
+        and FIFO mode starts upon an internal trigger event. When the
+        FIFO is full, data collecting is stopped.
+
+        4 # Bypass-to-Continuous mode. Data measurement storage inside
+        FIFO starts in Continuous mode upon an internal trigger event,
+        then the sample that follows the trigger is available in FIFO.
+
+        6 # Continuous mode. This mode provides a continuous FIFO update:
+        when 32 unread samples are stored in memory, as new data arrives
+        the oldest data is discarded and overwritten by the newer.
+
+    enum: [0, 1, 3, 4, 6]
+
   # tap and tap-tap configuration section
   # All default values are selected to match the power-up values.
   # tap and tap-tap events can be generated on INT1 only.
