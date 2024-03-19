@@ -114,6 +114,34 @@ int sd_init(const struct device *sdhc_dev, struct sd_card *card);
 bool sd_is_card_present(const struct device *sdhc_dev);
 
 
+/**
+ * @brief Enables SD card interrupt
+ *
+ * Enables SD card interrupt, and installs callback
+ * @param sdhc_dev SD host controller to enable card interrupt for
+ * @param callback callback when interrupt fires
+ * @param user_data parameter to pass to callback
+ * @retval 0 interrupt was enabled with callback
+ * @retval -ENOTSUP not supported
+ * @retval -EINVAL invalid parameters
+ * @retval -EIO I/O error
+ */
+int sd_enable_interrupt(const struct device *sdhc_dev,
+	sdhc_interrupt_cb_t callback, void *user_data);
+
+/**
+ * @brief Disables SD card interrupt
+ *
+ * Disables SD card interrupt
+ * @param sdhc_dev SD host controller to enable card interrupt for
+ * @retval 0 interrupt was disabled
+ * @retval -ENOTSUP not supported
+ * @retval -EINVAL invalid parameters
+ * @retval -EIO I/O error
+ */
+int sd_disable_interrupt(const struct device *sdhc_dev);
+
+
 #ifdef __cplusplus
 }
 #endif
