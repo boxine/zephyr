@@ -822,6 +822,10 @@ enum sdio_io_dir {
 #define SDIO_CCCR_INT_P 0x05 /*!< SDIO Interrupt pending register */
 
 #define SDIO_CCCR_ABORT 0x06 /*!< SDIO IO abort register */
+#define SDIO_CCCR_ABORT_AS0 BIT(0) /*!< Abort select 0 */
+#define SDIO_CCCR_ABORT_AS1 BIT(1) /*!< Abort select 1 */
+#define SDIO_CCCR_ABORT_AS2 BIT(2) /*!< Abort select 2 */
+#define SDIO_CCCR_ABORT_RES BIT(3) /*!< I/O Card Select */
 
 #define SDIO_CCCR_BUS_IF 0x07 /*!< SDIO bus interface control register */
 #define SDIO_CCCR_BUS_IF_WIDTH_MASK 0x3 /*!< SDIO bus width setting mask */
