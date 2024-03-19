@@ -153,12 +153,16 @@ static int find_sensor_trigger_device(const struct device *sensor)
 }
 
 /* Forward declaration */
+static void default_trigger_handler(const struct device *sensor,
+				    const struct sensor_trigger *trigger);
+
 static void data_ready_trigger_handler(const struct device *sensor,
 				       const struct sensor_trigger *trigger);
 
 #define TRIGGER_DATA_ENTRY(trig_enum, str_name, handler_func)                                      \
 	[(trig_enum)] = {.name = #str_name,                                                        \
-			 .handler = (handler_func),                                                \
+			 .handler =                                                                \
+				 (handler_func != NULL ? handler_func : default_trigger_handler),  \
 			 .trigger = {.chan = SENSOR_CHAN_ALL, .type = (trig_enum)}}
 
 /**
@@ -185,6 +189,25 @@ static const struct {
 	TRIGGER_DATA_ENTRY(SENSOR_TRIG_FIFO_WATERMARK, fifo_wm, NULL),
 	TRIGGER_DATA_ENTRY(SENSOR_TRIG_FIFO_FULL, fifo_full, NULL),
 };
+
+static void default_trigger_handler(const struct device *sensor,
+				    const struct sensor_trigger *trigger)
+{
+	for (unsigned int i = 0; i < ARRAY_SIZE(sensor_trigger_table); ++i) {
+		if (sensor_trigger_table[i].trigger.type == trigger->type) {
+			if (trigger->chan < ARRAY_SIZE(sensor_channel_name)) {
+				LOG_PRINTK("sensor=%s, chan=%s, trigger=%s", sensor->name,
+					   sensor_channel_name[trigger->chan],
+					   sensor_trigger_table[i].name);
+			} else {
+				LOG_PRINTK("sensor=%s, chan=%d, trigger=%s", sensor->name,
+					   trigger->chan, sensor_trigger_table[i].name);
+			}
+			return;
+		}
+	}
+	LOG_PRINTK("sensor=%s, chan=%d, trigger=%d", sensor->name, trigger->chan, trigger->type);
+}
 
 /**
  * Lookup the sensor trigger data by name
@@ -443,8 +466,8 @@ void sensor_shell_processing_callback(int result, uint8_t *buf, uint32_t buf_len
 				shell_info(ctx->sh,
 					   "channel idx=%d %s shift=%d num_samples=%d "
 					   "value=%" PRIsensor_three_axis_data,
-					   channel, sensor_channel_name[channel],
-					   data->shift, accumulator_buffer.count,
+					   channel, sensor_channel_name[channel], data->shift,
+					   accumulator_buffer.count,
 					   PRIsensor_three_axis_data_arg(*data, 0));
 				break;
 			}
@@ -568,7 +591,6 @@ static int cmd_get_sensor(const struct shell *sh, size_t argc, char *argv[])
 
 	return 0;
 }
-
 
 static int cmd_sensor_attr_set(const struct shell *shell_ptr, size_t argc, char *argv[])
 {
@@ -974,10 +996,8 @@ static void data_ready_trigger_handler(const struct device *sensor,
 			value.val1 = micro_value / 1000000;
 			value.val2 = (int32_t)llabs(micro_value - (value.val1 * 1000000));
 			LOG_INF("sensor=%.*s, chan=%s, num_samples=%u, data=%d.%06d",
-				sensor_name_len_before_at, sensor_name,
-				sensor_channel_name[i],
-				stats[i].count,
-				value.val1, value.val2);
+				sensor_name_len_before_at, sensor_name, sensor_channel_name[i],
+				stats[i].count, value.val1, value.val2);
 
 			stats[i].accumulator = 0;
 			stats[i].count = 0;
@@ -1017,7 +1037,7 @@ static int cmd_trig_sensor(const struct shell *sh, size_t argc, char **argv)
 
 		if (sensor_idx < 0) {
 			shell_error(sh, "Unable to support more simultaneous sensor trigger"
-				    " devices");
+					" devices");
 			err = -ENOTSUP;
 		} else {
 			struct sample_stats *stats = sensor_stats[sensor_idx];
