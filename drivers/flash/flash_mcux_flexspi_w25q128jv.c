@@ -113,12 +113,13 @@ static const uint32_t flash_flexspi_nor_lut[16][4] = {
 						kFLEXSPI_Command_RADDR_SDR, kFLEXSPI_1PAD, 0x18),
 				FLEXSPI_LUT_SEQ(kFLEXSPI_Command_WRITE_SDR, kFLEXSPI_1PAD, 0x04,
 						kFLEXSPI_Command_STOP, kFLEXSPI_1PAD, 0x0)},
-	[PAGE_PROGRAM_QUAD_INPUT] = {
-		FLEXSPI_LUT_SEQ(kFLEXSPI_Command_SDR,       kFLEXSPI_1PAD, SPI_NOR_CMD_PP_1_1_4,
-				kFLEXSPI_Command_RADDR_SDR, kFLEXSPI_1PAD, 0x18),
-		FLEXSPI_LUT_SEQ(kFLEXSPI_Command_WRITE_SDR, kFLEXSPI_4PAD, 0x04,
-				kFLEXSPI_Command_STOP,      kFLEXSPI_1PAD, 0),
-	},
+	[PAGE_PROGRAM_QUAD_INPUT] =
+		{
+			FLEXSPI_LUT_SEQ(kFLEXSPI_Command_SDR, kFLEXSPI_1PAD, SPI_NOR_CMD_PP_1_1_4,
+					kFLEXSPI_Command_RADDR_SDR, kFLEXSPI_1PAD, 0x18),
+			FLEXSPI_LUT_SEQ(kFLEXSPI_Command_WRITE_SDR, kFLEXSPI_4PAD, 0x04,
+					kFLEXSPI_Command_STOP, kFLEXSPI_1PAD, 0),
+		},
 	// Erase Chip LUTs
 	[ERASE_CHIP] = {FLEXSPI_LUT_SEQ(kFLEXSPI_Command_SDR, kFLEXSPI_1PAD, SPI_NOR_CMD_BULKE,
 					kFLEXSPI_Command_STOP, kFLEXSPI_1PAD, 0x0)},
@@ -338,8 +339,8 @@ static int flash_flexspi_nor_enable_quad_mode(const struct device *dev)
 	uint32_t quad_enabled = 0;
 	flash_flexspi_nor_read_status2(dev, &quad_enabled);
 	if (0x02 != quad_enabled) {
-			LOG_ERR("Failed to enable quad mode");
-			return -EIO;
+		LOG_ERR("Failed to enable quad mode");
+		return -EIO;
 	}
 	flash_flexspi_nor_wait_bus_busy(dev);
 	memc_flexspi_reset(data->controller);
@@ -498,31 +499,21 @@ static int flash_flexspi_nor_init(const struct device *dev)
 {
 	struct flash_flexspi_nor_data *data = dev->data;
 	uint8_t vendor_id;
-	uint32_t temp_lut[sizeof(flash_flexspi_nor_lut) / sizeof(uint32_t)];
 
 	if (!device_is_ready(data->controller)) {
 		LOG_ERR("Controller device is not ready");
 		return -ENODEV;
 	}
 
-	if (!memc_flexspi_is_running_xip(data->controller) &&
-	    memc_flexspi_set_device_config(data->controller, &data->config, data->port)) {
-		LOG_ERR("Could not set device configuration");
-		return -EINVAL;
+	if (memc_flexspi_is_running_xip(data->controller)) {
+		/* Wait for bus idle before configuring */
+		memc_flexspi_wait_bus_idle(data->controller);
 	}
 
-	/*
-	 * Using the LUT stored in the FlexSPI directly when updating
-	 * the FlexSPI can result in an invalid LUT entry being stored,
-	 * as the LUT itself describes how the FlexSPI should access the flash.
-	 * To resolve this, copy the LUT to a array placed in RAM before
-	 * updating the FlexSPI.
-	 */
-	memcpy(temp_lut, flash_flexspi_nor_lut, sizeof(flash_flexspi_nor_lut));
-
-	if (memc_flexspi_update_lut(data->controller, 0, (const uint32_t *)temp_lut,
-				    sizeof(temp_lut) / sizeof(uint32_t))) {
-		LOG_ERR("Could not update lut");
+	if (memc_flexspi_set_device_config(
+		    data->controller, &data->config, (const uint32_t *)flash_flexspi_nor_lut,
+		    sizeof(flash_flexspi_nor_lut) / MEMC_FLEXSPI_CMD_SIZE, data->port)) {
+		LOG_ERR("Could not set device configuration");
 		return -EINVAL;
 	}
 
@@ -563,7 +554,7 @@ static const struct flash_driver_api flash_flexspi_nor_api = {
 
 #define FLASH_FLEXSPI_DEVICE_CONFIG(n)                                                             \
 	{                                                                                          \
-		.flexspiRootClk = MHZ(120), .flashSize = DT_INST_PROP(n, size) / 8 / KB(1),         \
+		.flexspiRootClk = MHZ(120), .flashSize = DT_INST_PROP(n, size) / 8 / KB(1),        \
 		.CSIntervalUnit = CS_INTERVAL_UNIT(DT_INST_PROP(n, cs_interval_unit)),             \
 		.CSInterval = DT_INST_PROP(n, cs_interval),                                        \
 		.CSHoldTime = DT_INST_PROP(n, cs_hold_time),                                       \
@@ -576,7 +567,7 @@ static const struct flash_driver_api flash_flexspi_nor_api = {
 		.AHBWriteWaitInterval = DT_INST_PROP(n, ahb_write_wait_interval),                  \
 	}
 
-#define FLASH_FLEXSPI_W25Q128JV(n)                                                                       \
+#define FLASH_FLEXSPI_W25Q128JV(n)                                                                 \
 	static struct flash_flexspi_nor_data flash_flexspi_nor_data_##n = {                        \
 		.controller = DEVICE_DT_GET(DT_INST_BUS(n)),                                       \
 		.config = FLASH_FLEXSPI_DEVICE_CONFIG(n),                                          \
