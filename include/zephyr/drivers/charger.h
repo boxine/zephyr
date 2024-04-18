@@ -85,6 +85,28 @@ enum charger_property {
 	 */
 	CHARGER_PROP_CUSTOM_BEGIN = CHARGER_PROP_COMMON_COUNT + 1,
 	/** Reserved to demark end of valid enum properties */
+
+	/** Reports which input source is connected*/
+	CHARGER_PROP_CUSTOM_USB_DP_DM_DETECTION,
+
+	/** Reports whether a legacy cable is detected or not*/
+	CHARGER_PROP_CUSTOM_LEGACY_CABLE_DETECTED,
+
+	/** Reports the status of sink or source status*/
+	CHARGER_PROP_CUSTOM_SINK_OR_SOURCE,
+
+	/** Enable power delivery from battery */
+	CHARGER_PROP_CUSTOM_ENABLE_PD,
+
+	/** Reports the cable orientation*/
+	CHARGER_PROP_CUSTOM_CABLE_ORIENTATION,
+
+	/** Reports the input current limit*/
+	CHARGER_PROP_CUSTOM_INPUT_CURRENT_LIMIT,
+
+	/** Triggers high voltage from charger*/
+	CHARGER_PROP_CUSTOM_HV_REQ,
+
 	CHARGER_PROP_MAX = UINT16_MAX,
 };
 
@@ -207,6 +229,61 @@ enum charger_notification_severity {
 };
 
 /**
+ * @brief The input source detection result
+ */
+enum charger_input_source_detection {
+	CHARGER_INPUT_SOURCE_DETECTION_NOT_STARTED,
+	/** SDP: Standard downstream Port, max. 500mA */
+	CHARGER_INPUT_SOURCE_USB_SDP_500MA,
+	/** DCP: Dedicated charging port, max. 2000mA */
+	CHARGER_INPUT_SOURCE_USB_DCP_2000MA,
+	/** CDP: Charging downstream port, max. 1500mA */
+	CHARGER_INPUT_SOURCE_USB_CDP_1500MA,
+	/** Apple, non-standard, D+ 2V, D- 2.7V, max. 1000mA */
+	CHARGER_INPUT_SOURCE_DIVIDER_1_1000MA,
+	/** Apple, non-standard, D+ 2.7V, D- 2.0V, max. 2100mA */
+	CHARGER_INPUT_SOURCE_DIVIDER_2_2100MA,
+	/** Apple, non-standard, D+ 2.7V, D- 2.7V, max. 2400mA */
+	CHARGER_INPUT_SOURCE_DIVIDER_3_2400MA,
+	/** Non-standard, D+ 1.2V, D- 1.2V, max. 2000mA */
+	CHARGER_INPUT_SOURCE_DIVIDER_4_2000MA,
+	/** Detection unsucessful, USB 2.0 Standrd, max. 500mA */
+	CHARGER_INPUT_SOURCE_UNKNOWN_500MA,
+	/**  High Voltage adapter, 9V, 12V or 20V*/
+	CHARGER_INPUT_SOURCE_HIGH_VOLTAGE_ADAPTER_2000MA,
+	/** Non-standard, D+ 2.7V, D- >2.7V, max. 3000mA */
+	CHARGER_INPUT_SOURCE_DIVIDER_5_3000MA,
+};
+
+/**
+ * @brief The legacy cable detection result
+ */
+enum charger_legacy_cable_detection {
+	CHARGER_LEGACY_CABLE_INVALID,
+	CHARGER_LEGACY_CABLE_DETECTED,
+	CHARGER_LEGACY_CABLE_NOT_DETECTED,
+};
+
+/**
+ * @brief The sink or source detection result
+ */
+enum charger_power_role {
+	CHARGER_POWER_ROLE_ERROR,
+	CHARGER_POWER_ROLE_UNKOWN,
+	CHARGER_POWER_ROLE_SINK,
+	CHARGER_POWER_ROLE_SOURCE,
+};
+
+/**
+ * @brief The sink or source detection result
+ */
+enum charger_cable_orientation {
+	CHARGER_CABLE_ORIENTATION_UNKNOWN,
+	CHARGER_CABLE_ORIENTATION_UNFLIPPED,
+	CHARGER_CABLE_ORIENTATION_FLIPPED,
+};
+
+/**
  * @brief The input current thresholds for the charger to notify the system
  */
 struct charger_current_notifier {
@@ -216,6 +293,18 @@ struct charger_current_notifier {
 	uint32_t current_ua;
 	/** The duration of excess current before notifying the system */
 	uint32_t duration_us;
+};
+
+/**
+ * @brief The input current thresholds for the charger to notify the system
+ */
+enum charger_usb_pd_hv_req {
+	CHARGER_USB_PD_HV_REQ_5V,
+	CHARGER_USB_PD_HV_REQ_9V,
+	CHARGER_USB_PD_HV_REQ_12V,
+	CHARGER_USB_PD_HV_REQ_CONTINUOUS,
+	CHARGER_USB_PD_HV_UP,
+	CHARGER_USB_PD_HV_DOWN,
 };
 
 /**
@@ -237,6 +326,8 @@ union charger_propval {
 	enum charger_charge_type charge_type;
 	/** CHARGER_PROP_HEALTH */
 	enum charger_health health;
+	/** CHARGER_PROP_CUSTOM_USB_DP_DM_DETECTION*/
+	enum charger_input_source_detection input_source;
 	/** CHARGER_PROP_CONSTANT_CHARGE_CURRENT_UA */
 	uint32_t const_charge_current_ua;
 	/** CHARGER_PROP_PRECHARGE_CURRENT_UA */
@@ -251,7 +342,40 @@ union charger_propval {
 	uint32_t input_voltage_regulation_voltage_uv;
 	/** CHARGER_PROP_INPUT_CURRENT_NOTIFICATION */
 	struct charger_current_notifier input_current_notification;
+	/** CHARGER_PROP_CUSTOM_LEGACY_CABLE_DETECTED */
+	enum charger_legacy_cable_detection legacy_cable_detected;
+	/** CHARGER_PROP_CUSTOM_SINK_OR_SOURCE*/
+	enum charger_power_role power_role;
+	/** CHARGER_PROP_CUSTOM_CABLE_ORIENTATION*/
+	enum charger_cable_orientation cable_orientation;
+	/** CHARGER_PROP_CUSTOM_ENABLE_PD*/
+	bool enable_pd;
+	/** CHARGER_PROP_CUSTOM_INPUT_CURRENT_LIMIT*/
+	uint32_t input_current_limit;
+	/** CHARGER_PROP_CUSTOM_HV_REQ */
+	enum charger_usb_pd_hv_req high_voltage_request;
 };
+
+typedef enum charger_event_bits {
+	/* Triggers if input power is provided or removed. */
+	CHARGER_INT_INPUT_POWER_CHANGE,
+	/* Triggers when the charging is done */
+	CHARGER_INT_CHARGING_DONE,
+	/* Triggers when a fault occured */
+	CHARGER_INT_FAULT,
+	/* Triggers when a temperature change occured */
+	CHARGER_INT_TEMPERATURE_CHANGE,
+	/* Triggers when USB-PD detection finished */
+	CHARGER_INT_USB_PD_DETECTION_FINISHED,
+	/* Triggers when battery voltage low limit was reached */
+	CHARGER_INT_BATTERY_LOW,
+	/* Triggers on a watchdog fault oder watchdog bark*/
+	CHARGER_INT_WATCHDOG,
+	/* Triggers on any other IRQ*/
+	CHARGER_INT_NON_MASKED,
+} charger_event_bits_t;
+
+typedef void (*charger_event_cb_t)(const struct device *dev, charger_event_bits_t event);
 
 /**
  * @typedef charger_get_property_t
@@ -280,6 +404,14 @@ typedef int (*charger_set_property_t)(const struct device *dev, const charger_pr
 typedef int (*charger_charge_enable_t)(const struct device *dev, const bool enable);
 
 /**
+ * @typedef charger_register_callback
+ * @brief Callback API for registering of a callback for interrupt notification
+ *
+ * See charger_register_callback() for argument description
+ */
+typedef int (*charger_register_callback_t)(const struct device *dev, charger_event_cb_t callback);
+
+/**
  * @brief Charging device API
  *
  * Caching is entirely on the onus of the client
@@ -288,6 +420,7 @@ __subsystem struct charger_driver_api {
 	charger_get_property_t get_property;
 	charger_set_property_t set_property;
 	charger_charge_enable_t charge_enable;
+	charger_register_callback_t register_callback;
 };
 
 /**
@@ -349,6 +482,26 @@ static inline int z_impl_charger_charge_enable(const struct device *dev, const b
 	const struct charger_driver_api *api = (const struct charger_driver_api *)dev->api;
 
 	return api->charge_enable(dev, enable);
+}
+
+/**
+ * @brief Registers a callback for interrupt notification
+ *
+ * @param dev Pointer to the battery charger device
+ * @param enable true enables a charge cycle, false disables a charge cycle
+ *
+ * @retval 0 if successful
+ * @retval -EIO if communication with the charger failed
+ * @retval -EINVAL if the conditions for initiating charging are invalid
+ */
+__syscall int charger_register_callback(const struct device *dev, charger_event_cb_t callback);
+
+static inline int z_impl_charger_register_callback(const struct device *dev,
+						   charger_event_cb_t callback)
+{
+	const struct charger_driver_api *api = (const struct charger_driver_api *)dev->api;
+
+	return api->register_callback(dev, callback);
 }
 
 /**
