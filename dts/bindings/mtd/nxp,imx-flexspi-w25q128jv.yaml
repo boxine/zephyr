@@ -1,8 +1,0 @@
-# Copyright 2021 NXP
-# SPDX-License-Identifier: Apache-2.0
-
-description: NXP FlexSPI W25Q128JV
-
-compatible: "nxp,imx-flexspi-w25q128jv"
-
-include: ["nxp,imx-flexspi-device.yaml", soc-nv-flash.yaml]
