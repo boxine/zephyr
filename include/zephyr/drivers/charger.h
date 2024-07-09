@@ -107,6 +107,9 @@ enum charger_property {
 	/** Triggers high voltage from charger*/
 	CHARGER_PROP_CUSTOM_HV_REQ,
 
+	/** Resets the watchdog timer of the charger **/
+	CHARGER_PROP_CUSTOM_WATCHDOG_RESET,
+
 	CHARGER_PROP_MAX = UINT16_MAX,
 };
 
