@@ -159,6 +159,11 @@ static void default_trigger_handler(const struct device *sensor,
 static void data_ready_trigger_handler(const struct device *sensor,
 				       const struct sensor_trigger *trigger);
 
+static void tap_trigger_handler(const struct device *sensor, const struct sensor_trigger *trigger);
+
+static void threshold_trigger_handler(const struct device *sensor,
+				      const struct sensor_trigger *trigger);
+
 #define TRIGGER_DATA_ENTRY(trig_enum, str_name, handler_func)                                      \
 	[(trig_enum)] = {.name = #str_name,                                                        \
 			 .handler =                                                                \
@@ -180,8 +185,8 @@ static const struct {
 	TRIGGER_DATA_ENTRY(SENSOR_TRIG_DATA_READY, data_ready, data_ready_trigger_handler),
 	TRIGGER_DATA_ENTRY(SENSOR_TRIG_DELTA, delta, NULL),
 	TRIGGER_DATA_ENTRY(SENSOR_TRIG_NEAR_FAR, near_far, NULL),
-	TRIGGER_DATA_ENTRY(SENSOR_TRIG_THRESHOLD, threshold, NULL),
-	TRIGGER_DATA_ENTRY(SENSOR_TRIG_TAP, tap, NULL),
+	TRIGGER_DATA_ENTRY(SENSOR_TRIG_THRESHOLD, threshold, threshold_trigger_handler),
+	TRIGGER_DATA_ENTRY(SENSOR_TRIG_TAP, tap, tap_trigger_handler),
 	TRIGGER_DATA_ENTRY(SENSOR_TRIG_DOUBLE_TAP, double_tap, NULL),
 	TRIGGER_DATA_ENTRY(SENSOR_TRIG_FREEFALL, freefall, NULL),
 	TRIGGER_DATA_ENTRY(SENSOR_TRIG_MOTION, motion, NULL),
@@ -929,6 +934,17 @@ static int cmd_get_sensor_info(const struct shell *sh, size_t argc, char **argv)
 #else
 	return -EINVAL;
 #endif
+}
+
+static void tap_trigger_handler(const struct device *sensor, const struct sensor_trigger *trigger)
+{
+	LOG_INF("Tap!");
+}
+
+static void threshold_trigger_handler(const struct device *sensor,
+				      const struct sensor_trigger *trigger)
+{
+	LOG_INF("Threshold!");
 }
 
 static void data_ready_trigger_handler(const struct device *sensor,
