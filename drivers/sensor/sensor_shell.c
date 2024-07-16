@@ -173,6 +173,8 @@ static int find_sensor_trigger_device(const struct device *sensor)
 static void default_trigger_handler(const struct device *sensor,
 				    const struct sensor_trigger *trigger);
 
+static void tap_trigger_handler(const struct device *sensor, const struct sensor_trigger *trigger);
+
 static void data_ready_trigger_handler(const struct device *sensor,
 				       const struct sensor_trigger *trigger);
 
@@ -198,7 +200,7 @@ static const struct {
 	TRIGGER_DATA_ENTRY(SENSOR_TRIG_DELTA, delta, NULL),
 	TRIGGER_DATA_ENTRY(SENSOR_TRIG_NEAR_FAR, near_far, NULL),
 	TRIGGER_DATA_ENTRY(SENSOR_TRIG_THRESHOLD, threshold, NULL),
-	TRIGGER_DATA_ENTRY(SENSOR_TRIG_TAP, tap, NULL),
+	TRIGGER_DATA_ENTRY(SENSOR_TRIG_TAP, tap, tap_trigger_handler),
 	TRIGGER_DATA_ENTRY(SENSOR_TRIG_DOUBLE_TAP, double_tap, NULL),
 	TRIGGER_DATA_ENTRY(SENSOR_TRIG_FREEFALL, freefall, NULL),
 	TRIGGER_DATA_ENTRY(SENSOR_TRIG_MOTION, motion, NULL),
@@ -213,17 +215,17 @@ static void default_trigger_handler(const struct device *sensor,
 	for (unsigned int i = 0; i < ARRAY_SIZE(sensor_trigger_table); ++i) {
 		if (sensor_trigger_table[i].trigger.type == trigger->type) {
 			if (trigger->chan < ARRAY_SIZE(sensor_channel_name)) {
-				LOG_PRINTK("sensor=%s, chan=%s, trigger=%s", sensor->name,
+				LOG_PRINTK("sensor=%s, chan=%s, trigger=%sn", sensor->name,
 					   sensor_channel_name[trigger->chan],
 					   sensor_trigger_table[i].name);
 			} else {
-				LOG_PRINTK("sensor=%s, chan=%d, trigger=%s", sensor->name,
+				LOG_PRINTK("sensor=%s, chan=%d, trigger=%sn", sensor->name,
 					   trigger->chan, sensor_trigger_table[i].name);
 			}
 			return;
 		}
 	}
-	LOG_PRINTK("sensor=%s, chan=%d, trigger=%d", sensor->name, trigger->chan, trigger->type);
+	LOG_PRINTK("sensor=%s, chan=%d, trigger=%d\n", sensor->name, trigger->chan, trigger->type);
 }
 
 /**
@@ -979,6 +981,29 @@ static int cmd_get_sensor_info(const struct shell *sh, size_t argc, char **argv)
 #else
 	return -EINVAL;
 #endif
+}
+
+static void tap_trigger_handler(const struct device *sensor, const struct sensor_trigger *trigger)
+{
+	int ret;
+	struct sensor_value accel[3];
+	LOG_INF("Tap detected!");
+
+	ret = sensor_sample_fetch(sensor);
+	if (ret < 0) {
+		LOG_ERR("%s: sensor_sample_fetch() failed: %d", sensor->name, ret);
+		return;
+	}
+
+	ret = sensor_channel_get(sensor, SENSOR_CHAN_ACCEL_XYZ, accel);
+	if (ret < 0) {
+		LOG_ERR("%s: sensor_channel_get(XYZ) failed: %d", sensor->name, ret);
+		return;
+	}
+
+	LOG_INF("%16s [m/s^2]:    (X=%12.6f, Y=%12.6f, Z=%12.6f)", sensor->name,
+		sensor_value_to_double(&accel[0]), sensor_value_to_double(&accel[1]),
+		sensor_value_to_double(&accel[2]));
 }
 
 static void data_ready_trigger_handler(const struct device *sensor,
