@@ -23,6 +23,8 @@ manifest:
       url-base: https://github.com/zephyrproject-rtos
     - name: babblesim
       url-base: https://github.com/BabbleSim
+    - name: tonies-github
+      url-base: https://github.com/boxine/
 
   group-filter: [-babblesim, -optional]
 
@@ -198,7 +200,8 @@ manifest:
       groups:
         - hal
     - name: hal_nxp
-      revision: 862e001504bd6e0a4feade6a718e9f973116849c
+      remote: tonies-github
+      revision: f9b046f18891f6d32b38dc325297d55c322270fe
       path: modules/hal/nxp
       groups:
         - hal
